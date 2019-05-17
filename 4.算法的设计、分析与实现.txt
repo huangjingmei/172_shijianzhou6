@@ -1,0 +1,232 @@
+问题描述：
+    商店中每种商品都有标价。例如，一朵花的价格是 2 元。一个花瓶的价格是 5 元。为了吸引顾客，商店提供了一组优惠商品价。优惠商品是把一种或多种商品分成一组，并降价销售。例如，3 朵花的价格不是 6 元而是 5 元。2 个花瓶加 1 朵花的优惠价是 10 元。试设计一个算法，计算出某一顾客所购商品应付的最少费用。
+
+算法设计：
+对于给定欲购商品的价格和数量，以及优惠商品价，编程计算所购商品应付的最少费用。
+数据输入： 
+由文件 input.txt 提供欲购商品数据。文件的第 1 行中有 1 个整数 B(0≤B≤5)，表示所购商品种类数。接下来的 B 行，每行有 3 个数 C，K 和 P。C 表示商品的编码(每种商品有 唯一编码)，1≤C≤999。K 表示购买该种商品总数，1≤K≤5。P 是该种商品的正常单价(每件商品的价格)，1≤P≤999。请注意，一次最多可购买 5*5=25 件商品。
+由文件 offer.txt 提供优惠商品价数据。文件的第 1 行中有 1 个整数 S(0≤S≤99)，表示 共有 S 种优惠商品组合。接下来的 S 行，每行的第一个数描述优惠商品组合中商品的种类数 j。接着是 j 个数字对(C，K)，其中 C 是商品编码，1≤C≤999。K 表示该种商品在此组合中的数量，1≤K≤5。每行最后一个数字 P(1≤ P≤9999)表示此商品组合的优惠价。
+
+输入文件示例                                     输出文件示例            
+input.txt                      offer.txt               output.txt         
+2                              2                      14
+7 3 2                          1 7 3 5
+8 2 5                          2 7 1 8 2 1 0                       
+                               
+
+
+1、算法设计：
+   这道题与背包问题相类似，只是背包问题是给定容量，求最大价值的东西。而这道题目是给定所放的东西，求最小的费用（对应背包问题为最小的容量）。恰好是一个求最值的“逆问题”。背包问题是经典的动态规划问题，那么对于这道题也同样使用动态规划问题来解决最少费用购物问题。
+   本题采用动态规划的方法进行设计，定义本题的最优子结构以及状态为一个五元组：dp[x1][x2][x3][x4][x5]，其中x1代表要买的第一种物品的个数，x2代表要买的第二种物品的个数、以此类推。由于题目保证了B<=5，因此5元组已经够用了。我们用一个std::vector来存储每套组合方案的捆绑的种类以及该种类需要购买的数量。
+
+    由于动态规划要满足无后效性和最优化原理，所以我们来分析此题是否满足以上两点。先来状态表示的方法，商品不超过5种，而每种采购的数量又不超过5，那么用一个五元组来表示第I种商品买AI的最小费用：
+
+F（A1，A2，A3，A4，A5）    （1）
+
+考虑这个状态的由来，当然，我们不用优惠商品也可以买，显然这样不是最优。于是如果我们能够使用第I条商品组合的话，状态就便为了：
+
+F（A1-SI1，A2-SI2，A3-SI3，A4-SI4，A5-SI5）    （2）
+
+    这样的话，状态1的费用为状态2的费用加上SI的费用，而状态2的费用必须最低（很显然，用反证法即可），同时，我们也不管状态2是如何来的（因为每一个优惠商品组合的使用是没有限制的），所以本题既满足无后效性，又符合最优化原理，同时还有大量重叠子问题产生，动态规划解决此题是最好不过了。
+
+
+通过对问题的分析，我们知道了状态的表示和转移的基本方法，我们很容易得到一个状态转移方程：
+
+F[a,b,c,d,?]?=?Min{F[a-S1,b-S2,c-S3,d-S4,e-S5]+minCost[S]}
+
+初始条件为：
+
+F[a,b,c,d,e]=Cost[1]*a+Cost[2]*b+Cost[3]*c+Cost[4]*d+Cost[5]*e      即不用优惠的购买费用。
+
+
+
+
+2、算法分析
+   给定物品种类数n(0到5),接下来n行每行3个数商品编码c_i(1到999),需要购买的数量k_i(1到5),单价p_i(1到999)。然后给定m(0到99)种优惠,接下来m行,每行第一个数字q表示这种优惠需要购买的物品种类数,接着q个数对(c,k)表示编码为c的商品买k个,每行最后一个数字表示买这些物品组合的优惠价。输出购买所需物品的最少价格。
+
+
+
+3、算法实现
+关于算法的实现，我们使用Java和C语言来实现。
+（1）用C语言实现算法设计最少费用购物问题：
+#include<stdio.h>
+#include<stdlib.h>
+int main()
+{
+    int num[1000];//商品编码对应的第几种物品
+    int I[5][3]={0};//购买的物品标号，个数，单价
+    int O[99][12]={0};//优惠方案（种类，商品编码及个数，总价）
+    int C,K,P,B,S;
+    //C商品的编码
+    //K购买该种商品的数量
+    //P该种商品的正常单价
+    //B所购商品种类数
+    //S优惠商品组合数
+    int i[5],j[5];  // 定义一个表示5种商品购买数量为5样的数组
+    int m,n,x,y,z;   // 定义几个变量m、n、x、y、z
+    int min;   // 定义变量min存储最少的费用
+    int work[6][6][6][6][6];
+    FILE *fp;
+    fp=fopen("input.txt","r");  //打开input.txt文件
+    fscanf(fp,"%d",&B);   //输入商品的种类数
+    for(m=0;m<B;m++)   //从第一种商品开始找，遍历完几种商品
+    {
+        fscanf(fp,"%d%d%d",&C,&K,&P);   //输入商品的编码、购买每种商品的数量和价格
+        I[m][0]=C;  //每种商品的编码
+        I[m][1]=K;  //每种商品的购买数量
+        I[m][2]=P;  //每种商品的价格
+        num[C]=m;   //每种物品所对应的编码
+    } 
+    fclose(fp);  // 关闭input.txt文件
+    fp=fopen("offer.txt","r");   //打开offer.txt文件
+    fscanf(fp,"%d",&S);   //输入商品的组合数
+    for(m=0;m<S;m++)   //从第一个组合开始找，直到遍历完所有组合
+    {
+        fscanf(fp,"%d",&y);  //输入一个组合所需物品数量
+        O[m][0]=y;
+        for(n=1;n<=2*y;n++)   
+        {
+            fscanf(fp,"%d",&x);
+            if(n%2==1)
+            {
+                O[m][n]=num[x];
+            }
+            else
+            O[m][n]=x;
+        }
+        fscanf(fp,"%d",&O[m][n]);
+    }
+    
+    
+    work[0][0][0][0][0]=0;
+    
+    for(i[0]=0;i[0]<=I[0][1];i[0]++)  //把所有商品个数情况遍历一遍
+    {
+        for(i[1]=0;i[1]<=I[1][1];i[1]++)
+        {
+            for(i[2]=0;i[2]<=I[2][1];i[2]++)
+            {
+                for(i[3]=0;i[3]<=I[3][1];i[3]++)
+                {
+                    for(i[4]=0;i[4]<=I[4][1];i[4]++)
+                    {
+                        if(i[0]==0&&i[1]==0&&i[2]==0&&i[3]==0&&i[4]==0)
+                        continue;
+                        else
+                        {
+							work[i[0]][i[1]][i[2]][i[3]][i[4]]=1000000;
+                            min=i[0]*I[0][2]+i[1]*I[1][2]+i[2]*I[2][2]+
+                                i[3]*I[3][2]+i[4]*I[4][2];
+                            for(m=0;m<S;m++)
+                            {
+                                for(n=0;n<5;n++)
+                                j[n]=i[n];
+ 
+                                for(n=1;n<=2*O[m][0];n=n+2)
+                                {
+                                    if(i[O[m][n]]-O[m][n+1]<0)
+                                    j[O[m][n]]=0;
+                                    else 
+                                    j[O[m][n]]=i[O[m][n]]-O[m][n+1];
+                                }
+ 
+ 
+                                if(work[j[0]][j[1]][j[2]][j[3]][j[4]]+O[m][n]<min)
+									 min=work[j[0]][j[1]][j[2]][j[3]][j[4]]+O[m][n];
+                            }
+                            work[i[0]][i[1]][i[2]][i[3]][i[4]]=min;
+					
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    printf("%d\n",work[I[0][1]][I[1][1]][I[2][1]][I[3][1]][I[4][1]]);
+    return 0;
+}
+
+（2）用Java实现设计最少购物费用问题，运行结果如下：
+import java.util.Scanner;
+class CommodityCommodity{
+int piece;//购买数量
+int price;//购买价格
+}
+public class ZuiShaoFeiYongGouWuZuiShaoFeiYongGouWu {
+private static int MAXCODE = 999;   //商品编码的最大值
+private static int SALECOMB = 99;   //优惠商品组合数
+private static int KIND = 5;    //商品种类
+private static int QUANTITY = 5;    //购买某种商品数量的最大值
+private static int b;   //购买商品种类数
+private static int s;   //当前优惠组合数
+private static int[] num = new intint[MAXCODE+1];   //记录商品编码与商品种类的对应关系
+private static int[] pr oduct = new intint[KIND+1];   //记录不同种类商品的购买数量
+private static int[][] offer = new intint[SALECOMB+1][KIND+1];   //offer[i][j]: 商品组合的优惠价(j=0)；某种优惠组合中某种商品需要购买的数量(j>0)
+private static Commodity[] purch = new CommodityCommodity[KIND+1];   //记录不同商品的购买数量和购买价格
+private static int[][][][][] cost = new intint[QUANTITY+1][QUANTITY+1][QUANTITY+1][QUANTITY+1][QUANTITY+1];   //记录本次购买的总花费
+public static void main(String[] args){
+init();
+comp(1);
+out();
+}
+private static void minicost(){
+int i,j,k,m,n,p,minm;
+minm = 0;
+for(i=1; i<=b; i++)
+minm += product[i]*purch[i].price;
+for(p=1; p<=s; p++){
+i = product[1] - offer[p][1];
+j = product[2] - offer[p][2];
+k = product[3] - offer[p][3];
+m = product[4] - offer[p][4];
+n = product[5] - offer[p][5];
+if(i>=0 && j>=0 && k>=0 && m>=0 && n>=0 && cost[i][j][k][m][n]+offer[p][0] < minm)
+minm = cost[i][j][k][m][n] + offer[p][0];
+}
+cost[product[1]][product[2]][product[3]][product[4]][product[5]] = minm;
+}
+private static void init(){
+Scanner input = new ScannerScanner(System.in);
+int i,j,n,p,t,code;
+for(i=0; i<100; i++)
+for(j=0; j<6; j++)
+offer[i][j] = 0;
+for(i=0; i<6; i++){
+purch[i] = new CommodityCommodity();
+purch[i].piece = 0;
+purch[i].price = 0;
+product[i] = 0;
+}
+b = input.nextInt();
+for(i=1; i<=b; i++){
+code = input.nextInt();
+purch[i].piece = input.nextInt();
+purch[i].price = input.nextInt();
+num[code] = i;
+}
+s = input.nextInt();
+for(i=1; i<=s; i++){
+t = input.nextInt();
+for(j=1; j<=t; j++){
+n = input.nextInt();
+p = input.nextInt();
+offer[i][num[n]] = p;
+}
+offer[i][0] = input.nextInt();
+}
+}
+private static void comp(int i){
+if(i > b){
+minicost();
+return;
+}
+for(int j=0; j<=purch[i].piece; j++){
+product[i] = j;
+comp(i+1);
+}
+}
+private static void out(){
+System.out.println(cost[product[1]][product[2]][product[3]][product[4]][product[5]]);
+}
+}
